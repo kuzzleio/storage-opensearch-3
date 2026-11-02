@@ -10,4 +10,4 @@ vi.mock("kuzzle", async (importOriginal) => {
 });
 
 // The OpenSearch client answers in the Elasticsearch 7 client's envelope.
-describeElasticsearch("7", OpenSearch3Driver);
+describeElasticsearch("7", OpenSearch3Driver, "opensearch");
