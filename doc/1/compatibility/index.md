@@ -46,3 +46,7 @@ Upgrading the driver means restarting every node on the new version, not a rolli
 
 The driver does not migrate data. Move it with the engines' own tools (snapshot / restore, or a remote reindex from
 OpenSearch), then point `client.node` at the OpenSearch cluster.
+
+Code that checks which engine it runs on reads `engine` from `context.accessors.getStorageEngine()` (plugins) or
+`app.storage.getEngine()` (applications): this driver answers `"opensearch"`. Its versions up to 1.0.0-beta.3
+answered `"elasticsearch"`.
