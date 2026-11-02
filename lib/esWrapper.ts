@@ -128,7 +128,7 @@ class ESWrapper {
       esError.message,
     );
 
-    // Try to match a known elasticsearch error
+    // Try to match a known engine error
     for (const betterError of errorMessagesMapping) {
       const matches = message.match(betterError.regex);
 
@@ -171,7 +171,7 @@ class ESWrapper {
     error: ThrownESResponseError,
     message: string,
   ): KuzzleError {
-    debug('unhandled "Conflict" elasticsearch error: %o', error);
+    debug('unhandled "Conflict" %s error: %o', ENGINE, error);
 
     return storageError.get("unexpected_error", message);
   }
@@ -213,7 +213,7 @@ class ESWrapper {
         : `${error.message}: ${error.body?._id}`;
     }
 
-    debug('unhandled "NotFound" elasticsearch error: %o', error);
+    debug('unhandled "NotFound" %s error: %o', ENGINE, error);
 
     return storageError.get("unexpected_not_found", errorMessage);
   }
@@ -240,7 +240,8 @@ class ESWrapper {
     }
 
     debug(
-      'unhandled "BadRequest" elasticsearch error: %o',
+      'unhandled "BadRequest" %s error: %o',
+      ENGINE,
       get(error, "meta.body.error.reason", error.message),
     );
 
@@ -249,7 +250,8 @@ class ESWrapper {
 
   _handleUnknownError(error: ThrownESError, message: string): KuzzleError {
     debug(
-      "unhandled elasticsearch error (unhandled type: %s): %o",
+      "unhandled %s error (unhandled type: %s): %o",
+      ENGINE,
       get(error, "meta.statusCode", "<no status code>"),
       error,
     );
