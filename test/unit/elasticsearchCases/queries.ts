@@ -686,6 +686,21 @@ export function describeQueries(harness: ESHarness) {
       });
     });
 
+    it("sends no document limit for a negative size (no limit)", async () => {
+      armFetchAndDelete();
+
+      await harness.client.deleteByQuery(
+        index,
+        collection,
+        { filter: "term" },
+        { fetch: false, size: -1 },
+      );
+
+      expect(harness.sent(harness.clientStub.deleteByQuery)).not.toHaveProperty(
+        harness.envelope.deleteLimit,
+      );
+    });
+
     it("skips the fetch, and answers no documents, when asked not to", async () => {
       armFetchAndDelete();
 
