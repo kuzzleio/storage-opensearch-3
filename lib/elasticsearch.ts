@@ -1871,7 +1871,10 @@ export class OpenSearch {
    * @param indexSettings the index settings
    * @returns {{index: *}} a new index settings with only allowed settings.
    */
-  getAllowedIndexSettings(indexSettings: JSONObject) {
+  getAllowedIndexSettings(indexSettings: JSONObject): { index: JSONObject } {
+    // Declared rather than inferred: the inferred type is lodash's `Omit`,
+    // and the declarations this package ships must not need `@types/lodash`,
+    // a devDependency.
     return {
       index: _.omit(indexSettings.index, [
         "creation_date",
