@@ -42,7 +42,6 @@ import type {
 
 import assert from "assert";
 
-import Bluebird from "bluebird";
 import ms from "ms";
 
 import type { StorageEngineElasticsearch, ValidatedTarget } from "kuzzle";
@@ -55,6 +54,7 @@ import {
 
 import {
   assertIsObject,
+  delay,
   didYouMean,
   extractFields,
   isPlainObject,
@@ -137,7 +137,7 @@ export class OpenSearch {
   public _config: StorageEngineElasticsearch;
 
   private readonly logger = global.kuzzle.log.child(
-    "service:storage:elasticsearch:7",
+    "service:storage:opensearch:3",
   );
 
   constructor(
@@ -207,7 +207,7 @@ export class OpenSearch {
       this.logger.warn(
         [
           "Your dynamic mapping policy is set to 'true' for new fields.",
-          "Elasticsearch will try to automatically infer mapping for new fields, and those cannot be changed afterward.",
+          "OpenSearch will try to automatically infer mapping for new fields, and those cannot be changed afterward.",
           'See the "services.storageEngine.commonMapping.dynamic" option in the kuzzlerc configuration file to change this value.',
         ].join("\n"),
       );
@@ -621,7 +621,9 @@ export class OpenSearch {
         Object.entries(innerHits).map(
           async ([name, innerHit]): Promise<[string, unknown[]]> => [
             name,
-            await Bluebird.map(innerHit.hits.hits, formatHit),
+            await Promise.all(
+              innerHit.hits.hits.map((hit: JSONObject) => formatHit(hit)),
+            ),
           ],
         ),
       );
@@ -629,12 +631,11 @@ export class OpenSearch {
       return Object.fromEntries(formatted);
     }
 
-    const hits = await Bluebird.map(
-      body.hits.hits,
-      async (hit: JSONObject) => ({
+    const hits = await Promise.all(
+      body.hits.hits.map(async (hit: JSONObject) => ({
         inner_hits: await formatInnerHits(hit.inner_hits),
         ...(await formatHit(hit)),
-      }),
+      })),
     );
 
     return {
@@ -1464,7 +1465,7 @@ export class OpenSearch {
     let scrollId: string | undefined;
 
     try {
-      results = await new Bluebird<unknown[]>((resolve, reject) => {
+      results = await new Promise<unknown[]>((resolve, reject) => {
         this._client.search(
           esRequest,
           async function getMoreUntilDone(
@@ -1871,7 +1872,10 @@ export class OpenSearch {
    * @param indexSettings the index settings
    * @returns {{index: *}} a new index settings with only allowed settings.
    */
-  getAllowedIndexSettings(indexSettings: JSONObject) {
+  getAllowedIndexSettings(indexSettings: JSONObject): { index: JSONObject } {
+    // Declared rather than inferred: the inferred type is lodash's `Omit`,
+    // and the declarations this package ships must not need `@types/lodash`,
+    // a devDependency.
     return {
       index: _.omit(indexSettings.index, [
         "creation_date",
@@ -2328,7 +2332,7 @@ export class OpenSearch {
    */
   async deleteIndexes(indexes: string[] = []) {
     if (indexes.length === 0) {
-      return Bluebird.resolve([]);
+      return [];
     }
     const deleted = new Set<string>();
 
@@ -3855,7 +3859,7 @@ export class OpenSearch {
   async waitForElasticsearch() {
     if (esState !== esStateEnum.NONE) {
       while (esState !== esStateEnum.OK) {
-        await Bluebird.delay(1000);
+        await delay(1000);
       }
 
       return;
@@ -3863,7 +3867,7 @@ export class OpenSearch {
 
     esState = esStateEnum.AWAITING;
 
-    this.logger.info("[ℹ] Trying to connect to Elasticsearch...");
+    this.logger.info("[ℹ] Trying to connect to OpenSearch...");
 
     while (esState !== esStateEnum.OK) {
       try {
@@ -3873,16 +3877,16 @@ export class OpenSearch {
         });
 
         if (health.body.number_of_pending_tasks === 0) {
-          this.logger.info("[✔] Elasticsearch is ready");
+          this.logger.info("[✔] OpenSearch is ready");
           esState = esStateEnum.OK;
         } else {
           this.logger.info(
-            `[ℹ] Still waiting for Elasticsearch: ${health.body.number_of_pending_tasks} cluster tasks remaining`,
+            `[ℹ] Still waiting for OpenSearch: ${health.body.number_of_pending_tasks} cluster tasks remaining`,
           );
-          await Bluebird.delay(1000);
+          await delay(1000);
         }
       } catch {
-        await Bluebird.delay(1000);
+        await delay(1000);
       }
     }
   }
@@ -3937,6 +3941,10 @@ export class OpenSearch {
 
         item[action]._index = alias;
 
+        // Not dead code: OpenSearch has no mapping types and refuses a bulk
+        // action carrying `_type` ("Action/metadata line [1] contains an
+        // unknown parameter [_type]", BulkRequestParser.java:247 on 2.19.0
+        // and 3.0.0). Dropping it keeps legacy `bulk:import` payloads working.
         if (item[action]?._type) {
           item[action]._type = undefined;
         }
