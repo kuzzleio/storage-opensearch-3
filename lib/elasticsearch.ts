@@ -1173,6 +1173,13 @@ export class OpenSearch {
       size,
     };
 
+    // Kuzzle asks for no limit with a negative size (bulk:deleteByQuery),
+    // which Elasticsearch 7 accepted and OpenSearch refuses: no `size` is
+    // no limit for both.
+    if (size < 0) {
+      delete esRequest.size;
+    }
+
     if (!isPlainObject(query)) {
       throw storageError.get("missing_argument", "body.query");
     }
