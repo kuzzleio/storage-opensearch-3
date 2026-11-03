@@ -1,0 +1,57 @@
+/*
+ * Kuzzle, a backend software, self-hostable and ready to use
+ * to power modern apps
+ *
+ * Copyright 2015-2026 Kuzzle
+ * mailto: support AT kuzzle.io
+ * website: http://kuzzle.io
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+import { Client } from "@opensearch-project/opensearch";
+import type { JSONObject, StorageDriver } from "kuzzle";
+
+import { OpenSearch } from "./elasticsearch";
+
+/**
+ * The OpenSearch 3 storage driver of Kuzzle: Kuzzle's Elasticsearch 7
+ * driver, on the OpenSearch 3 client.
+ */
+export class OpenSearch3Driver extends OpenSearch implements StorageDriver {
+  static createNativeClient(clientConfig: JSONObject): Client {
+    return new Client(clientConfig);
+  }
+
+  /** The close under way, which every `close()` call answers */
+  private closing: Promise<void> | undefined;
+
+  init(): Promise<void> {
+    return this._initSequence();
+  }
+
+  /**
+   * Releases the engine connections. Kuzzle (2.61 and later) calls it once, on
+   * a graceful shutdown, possibly before `init()` resolved: closes the client
+   * `init()` built, if it built one, and only once.
+   */
+  close(): Promise<void> {
+    this.closing ??= (async () => {
+      await this._client?.close();
+    })();
+
+    return this.closing;
+  }
+}
+
+export default OpenSearch3Driver;
