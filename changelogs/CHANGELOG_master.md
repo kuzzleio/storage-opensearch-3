@@ -1,3 +1,9 @@
+## [1.0.1](https://github.com/kuzzleio/storage-opensearch-3/compare/v1.0.0...v1.0.1) (2026-11-12)
+
+### Bug Fixes
+
+* report why the engine does not answer at startup, and fail on what waiting cannot fix ([f9a109e](https://github.com/kuzzleio/storage-opensearch-3/commit/f9a109e69f7480fe04059c5c87d4e404bd79eb06)), closes [kuzzleio/storage-es-8#9](https://github.com/kuzzleio/storage-es-8/issues/9)
+
 ## 1.0.0 (2026-11-03)
 
 ### Dependencies
