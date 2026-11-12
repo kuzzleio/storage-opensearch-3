@@ -56,7 +56,9 @@ import {
   assertIsObject,
   delay,
   didYouMean,
+  errorMessage,
   extractFields,
+  isPermanentConnectionError,
   isPlainObject,
   randomNumber,
 } from "./helpers";
@@ -3858,16 +3860,25 @@ export class OpenSearch {
 
   async waitForElasticsearch() {
     if (esState !== esStateEnum.NONE) {
-      while (esState !== esStateEnum.OK) {
+      while (esState === esStateEnum.AWAITING) {
         await delay(1000);
       }
 
-      return;
+      if (esState === esStateEnum.OK) {
+        return;
+      }
+
+      // The instance that was waiting gave up: try, and fail, the same way
     }
 
     esState = esStateEnum.AWAITING;
 
     this.logger.info("[ℹ] Trying to connect to OpenSearch...");
+
+    // Logged when it changes, and every 30 attempts while it does not: the
+    // only sign, in the logs, of what the engine answers (storage-es-8#9)
+    let lastReason: string | null = null;
+    let attempts = 0;
 
     while (esState !== esStateEnum.OK) {
       try {
@@ -3885,7 +3896,24 @@ export class OpenSearch {
           );
           await delay(1000);
         }
-      } catch {
+      } catch (error) {
+        const reason = errorMessage(error);
+
+        if (isPermanentConnectionError(error)) {
+          esState = esStateEnum.NONE;
+
+          throw storageError.get(
+            "unexpected_error",
+            `Cannot connect to OpenSearch: ${reason}`,
+          );
+        }
+
+        if (reason !== lastReason || attempts % 30 === 0) {
+          this.logger.warn(`[⚠] OpenSearch is not reachable yet: ${reason}`);
+          lastReason = reason;
+        }
+
+        attempts++;
         await delay(1000);
       }
     }
