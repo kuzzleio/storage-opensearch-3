@@ -1,3 +1,9 @@
+## [1.1.0](https://github.com/kuzzleio/storage-opensearch-3/compare/v1.0.1...v1.1.0) (2026-11-25)
+
+### Features
+
+* **search:** allow min_score and track_scores, add search.additionalBodyKeys ([40430c7](https://github.com/kuzzleio/storage-opensearch-3/commit/40430c789da2ca759702c6ba885a0424dd00fc8d))
+
 ## [1.0.1](https://github.com/kuzzleio/storage-opensearch-3/compare/v1.0.0...v1.0.1) (2026-11-12)
 
 ### Bug Fixes
